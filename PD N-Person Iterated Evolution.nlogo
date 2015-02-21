@@ -13,108 +13,125 @@ turtles-own [
 
 
 to setup
-  ca
+  clear-all
   add-turtles
+  reset-ticks
 end
 
 to add-turtles
   crt n-random [ 
     set strategy "random" 
     set defect-now? one-of [True False]
-    set color gray - 1 ]
+    set color gray - 1 
+    set score 10 
+    set partner nobody
+    set partner-history false
+    setxy random-xcor random-ycor ]
   crt n-cooperate [ 
     set strategy "cooperate" 
     set defect-now? False
-    set color blue ]
+    set color blue
+    set score 10 
+    set partner nobody
+    set partner-history false
+    setxy random-xcor random-ycor ]
   crt n-defect [ 
     set strategy "defect" 
     set defect-now? True
-    set color red ]
+    set color red
+    set score 10 
+    set partner nobody
+    set partner-history false
+    setxy random-xcor random-ycor ]
   crt n-tit-for-tat [ 
     set strategy "tit-for-tat" 
     set defect-now? False
-    set color lime ]
+    set color lime
+    set score 10 
+    set partner nobody
+    set partner-history false
+    setxy random-xcor random-ycor ]
   crt n-unforgiving [ 
     set strategy "unforgiving" 
     set defect-now? False
-    set color turquoise - 1 ]
-  ;;set the variables that all turtles share
-  ask turtles [
-    set score 10
+    set color turquoise - 1
+    set score 10 
     set partner nobody
-    setxy random-xcor random-ycor
+    set partner-history false
+    setxy random-xcor random-ycor ]
+  ask turtles [
   ]
 end
 
 to go
-  ask turtles [         ;;clear last round
+  ;;clear last round
+  ask turtles [
     set partner nobody 
     set label ""
     ]
-  ask turtles [         ;; set partner
-    rt random 360 fd 1  ;; move
-    set score (score - 1)
+  ;;move
+  if move? [
+    ask turtles [ rt random 360 fd 1 ] ]
+  
+  ;; set partner
+  ask turtles [         
     set partner one-of (turtles-on neighbors) with [ partner = nobody ]
     if partner != nobody [ ask partner [ set partner myself ] ]
   ]
-  ask turtles with [ partner != nobody ]  [ payoff ]     ;;calculate the payoff for this round
-  ask turtles with [ partner != nobody ]  [ select-action ]     ;;all partnered turtles select action
-  if die? [ ask turtles with [ score < 1 ] [die] ]
+  
+  ;;play
+  ask-concurrent turtles with [ partner != nobody ]  [ 
+    select-action     ;;all partnered turtles select action
+    payoff      ;;calculate the payoff for this round
+    set partner-history [defect-now?] of partner
+    ]
+  
+  ;;life and death
   if hatch? [ ask turtles with [ score > reproduce] [
     set score (score - reproduce)
     hatch 1 [
       set score 10
       set partner nobody
-      setxy random-xcor random-ycor
-    ]
-  ] ]
-  if (count turtles) = 0 [ stop ]
-  if (count turtles) > 10000 [ stop ]
-  do-plots
+      rt random 360 fd radius
+      ]
+    ] ]
+  if decay? [ask turtles [ set score score - 1 ] ]
+  if die? [ ask turtles with [ score < 1 ] [die] ]
+  
+  ;; control
+  ask turtles [ set label score ]
+  if (count turtles) = 0 or (count turtles) > 10000 [ stop ]
   tick
 end
 
-;;choose an action based upon the strategy being played
+
 to select-action ;;turtle procedure
+  ;;choose an action based upon the strategy being played
   if strategy = "random" [ set defect-now? one-of [True False] ]
-  ;; if strategy = "cooperate" [ set defect-now? False ]
-  ;; if strategy = "defect" [ set defect-now? True ]
-  if strategy = "tit-for-tat" [ set defect-now? partner-defected? ]
+  ;if strategy = "cooperate" [ set defect-now? False ]
+  ;if strategy = "defect" [ set defect-now? True ]
+  if strategy = "tit-for-tat" [ set defect-now? partner-history ]
   if strategy = "unforgiving" [ 
-    if partner-defected? [set defect-now? True]
+    if not defect-now? and partner-history [set defect-now? True]
     ]
 end
 
 to payoff ;;turtle procedure
+  ;;calculate wins and loses
   set partner-defected? [defect-now?] of partner
   ifelse partner-defected? [
-    ifelse defect-now? [
-      set score (score + D_D) set label D_D
-    ] [
-      set score (score + C_D) set label C_D
-    ]
+    ifelse defect-now? 
+      [ set score (score + D_D) set label D_D ] 
+      [ set score (score + C_D) set label C_D ]
   ] [
-    ifelse defect-now? [
-      set score (score + D_C) set label D_C
-    ] [
-      set score (score + C_C) set label C_C
-    ]
+    ifelse defect-now? 
+      [ set score (score + D_C) set label D_C ] 
+      [ set score (score + C_C) set label C_C ]
   ]
 end
 
 
 to do-plots
-  set-current-plot "Total"
-  set-current-plot-pen "random"
-  plot count turtles with [strategy = "random"]
-  set-current-plot-pen "cooperate"
-  plot count turtles with [strategy = "cooperate"]
-  set-current-plot-pen "defect"
-  plot count turtles with [strategy = "defect"]
-  set-current-plot-pen "tit-for-tat"
-  plot count turtles with [strategy = "tit-for-tat"]
-  set-current-plot-pen "unforgiving"
-  plot count turtles with [strategy = "unforgiving"]
   
   set-current-plot "Rate"
   set-current-plot-pen "random"
@@ -128,7 +145,6 @@ to do-plots
   set-current-plot-pen "unforgiving"
   plot (count turtles with [strategy = "unforgiving"]) / (count turtles)
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 303
@@ -155,6 +171,7 @@ GRAPHICS-WINDOW
 1
 1
 ticks
+30.0
 
 BUTTON
 8
@@ -171,6 +188,7 @@ NIL
 NIL
 NIL
 NIL
+1
 
 BUTTON
 85
@@ -187,6 +205,7 @@ NIL
 NIL
 NIL
 NIL
+1
 
 SLIDER
 8
@@ -212,7 +231,7 @@ n-cooperate
 n-cooperate
 0
 50
-10
+0
 1
 1
 NIL
@@ -242,7 +261,7 @@ n-tit-for-tat
 n-tit-for-tat
 0
 50
-16
+25
 1
 1
 NIL
@@ -264,10 +283,10 @@ NIL
 HORIZONTAL
 
 TEXTBOX
-12
-175
-178
-399
+11
+236
+177
+460
                 PAYOFF:\n                     Partner    \nTurtle        C                  D\n-----------------------------------------\n\n    C        \n\n-----------------------------------------\n\n    D       \n\n-----------------------------------------\n(C = Cooperate, D = Defect)
 11
 0.0
@@ -288,34 +307,35 @@ NIL
 NIL
 NIL
 NIL
+1
 
 INPUTBOX
-49
-222
-108
-282
+48
+283
+107
+343
 C_C
-3
+4
 1
 0
 Number
 
 INPUTBOX
-113
-222
-172
-282
+112
+283
+171
+343
 C_D
-0
+-1
 1
 0
 Number
 
 INPUTBOX
-49
-286
-108
-346
+48
+347
+107
+407
 D_C
 5
 1
@@ -323,36 +343,36 @@ D_C
 Number
 
 INPUTBOX
-113
-286
-172
-346
+112
+347
+171
+407
 D_D
-1
+0
 1
 0
 Number
 
 SLIDER
+8
+162
 134
-127
-259
-160
+195
 reproduce
 reproduce
 10
 100
-25
+15
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-743
-24
-943
-174
+739
+10
+939
+160
 Total
 NIL
 NIL
@@ -362,18 +382,19 @@ NIL
 10.0
 true
 false
+"" ""
 PENS
-"random" 1.0 0 -7500403 true
-"tit-for-tat" 1.0 0 -10899396 true
-"cooperate" 1.0 0 -13345367 true
-"defect" 1.0 0 -2674135 true
-"unforgiving" 1.0 0 -14835848 true
+"random" 1.0 0 -7500403 true "" "plot count turtles with [strategy = \"random\"]"
+"tit-for-tat" 1.0 0 -10899396 true "" "plot count turtles with [strategy = \"tit-for-tat\"]"
+"cooperate" 1.0 0 -13345367 true "" "plot count turtles with [strategy = \"cooperate\"]"
+"defect" 1.0 0 -2674135 true "" "plot count turtles with [strategy = \"defect\"]"
+"unforgiving" 1.0 0 -14835848 true "" "plot count turtles with [strategy = \"unforgiving\"]"
 
 SWITCH
 189
-208
+248
 292
-241
+281
 die?
 die?
 0
@@ -381,10 +402,10 @@ die?
 -1000
 
 SWITCH
-189
-247
-293
-280
+188
+352
+292
+385
 hatch?
 hatch?
 0
@@ -392,10 +413,10 @@ hatch?
 -1000
 
 BUTTON
-190
-288
-293
-321
+188
+388
+291
+421
 NIL
 add-turtles
 NIL
@@ -406,12 +427,13 @@ NIL
 NIL
 NIL
 NIL
+1
 
 PLOT
-742
-180
-942
-330
+739
+161
+939
+311
 Rate
 NIL
 NIL
@@ -421,48 +443,98 @@ NIL
 1.0
 true
 false
+"" ""
 PENS
-"random" 1.0 0 -7500403 true
-"tit-for-tat" 1.0 0 -10899396 true
-"cooperate" 1.0 0 -13345367 true
-"defect" 1.0 0 -2674135 true
-"unforgiving" 1.0 0 -14835848 true
+"random" 1.0 0 -7500403 true "" "plot (count turtles with [strategy = \"random\"]) / (count turtles)"
+"tit-for-tat" 1.0 0 -10899396 true "" "plot (count turtles with [strategy = \"tit-for-tat\"]) / (count turtles)"
+"cooperate" 1.0 0 -13345367 true "" "plot (count turtles with [strategy = \"cooperate\"]) / (count turtles)"
+"defect" 1.0 0 -2674135 true "" "plot (count turtles with [strategy = \"defect\"]) / (count turtles)"
+"unforgiving" 1.0 0 -14835848 true "" "plot (count turtles with [strategy = \"unforgiving\"]) / (count turtles)"
+
+SWITCH
+189
+281
+292
+314
+decay?
+decay?
+0
+1
+-1000
+
+PLOT
+739
+312
+939
+462
+Cooperate Defect
+NIL
+NIL
+0.0
+10.0
+0.0
+1.0
+true
+false
+"" ""
+PENS
+"defect" 1.0 0 -2674135 true "" "plot (count turtles with [defect-now? = True]) / (count turtles)"
+"cooperate" 1.0 0 -7500403 true "" "plot (count turtles with [defect-now? = False]) / (count turtles)"
+
+SLIDER
+137
+162
+261
+195
+radius
+radius
+0
+10
+1
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+188
+316
+291
+349
+move?
+move?
+1
+1
+-1000
 
 @#$#@#$#@
-WHAT IS IT?
------------
-This model is a multiplayer version of the iterated prisoner's dilemma. It is intended to explore the strategic implications that emerge when the world consists entirely of prisoner's dilemma like interactions. If you are unfamiliar with the basic concepts of the prisoner's dilemma or the iterated prisoner's dilemma, please refer to the PD BASIC and PD TWO PERSON ITERATED models found in the PRISONER'S DILEMMA suite.
+## WHAT IS IT?
+
+This model is a multiplayer version of the iterated prisoner's dilemma with reproduction and death. It is intended to explore the strategic and evolutionary implications that emerge when the world consists entirely of prisoner's dilemma like interactions. If you are unfamiliar with the basic concepts of the prisoner's dilemma or the iterated prisoner's dilemma, please refer to the PD BASIC, PD TWO PERSON ITERATED and PD N-Person Iterated models found in the PRISONER'S DILEMMA suite.
 
 
+## HOW IT WORKS
 
-HOW IT WORKS
-------------
-The PD TWO PERSON ITERATED model demonstrates an interesting concept: When interacting with someone over time in a prisoner's dilemma scenario, it is possible to tune your strategy to do well with theirs. Each possible strategy has unique strengths and weaknesses that appear through the course of the game. For instance, always defect does best of any against the random strategy, but poorly against itself. Tit-for-tat does poorly with the random strategy, but well with itself.
-
-This makes it difficult to determine a single "best" strategy. One such approach to doing this is to create a world with multiple agents playing a variety of strategies in repeated prisoner's dilemma situations. This model does just that. The turtles with different strategies wander around randomly until they find another turtle to play with. (Note that each turtle remembers their last interaction with each other turtle. While some strategies don't make use of this information, other strategies do.)
+In the Iterated PD different strategies interact in different ways with each other. This makes it difficult to determine a single "best" strategy. One such approach to doing this is to create a world with multiple agents playing a variety of strategies in repeated prisoner's dilemma situations. The players win energy from each game, which they can use to reproduce. If a player has no energy it dies. The turtles with different strategies wander around randomly until they find another turtle to play with. (Note that each turtle remembers their last interaction with each other turtle. While some strategies don't make use of this information, other strategies do.)
 
 Payoffs
--------
+
 When two turtles interact, they display their respective payoffs as labels.
 
 Each turtle's payoff for each round will determined as follows:
 
-|             | Partner's Action
-|  Turtle's   |
-|   Action    |   C       D
-| ------------|-----------------
-|       C     |   3       0
-| ------------|-----------------
-|       D     |   5       1
-| ------------|-----------------
-|  (C = Cooperate, D = Defect)
-
-(Note: This way of determining payoff is the opposite of how it was done in the PD BASIC model. In PD BASIC, you were awarded something bad- jail time. In this model, something good is awarded- money.)
+                 | Partner's Action
+      Turtle's   |
+       Action    |   C       D
+     ------------|-----------------
+           C     |   3       0
+     ------------|-----------------
+           D     |   5       1
+     ------------|-----------------
+      (C = Cooperate, D = Defect)
 
 
-
-HOW TO USE IT
---------------
+## HOW TO USE IT
 
 Buttons:
 
@@ -494,9 +566,8 @@ Plots:
 
 AVERAGE-PAYOFF - The average payoff of each strategy in an interaction vs. the number of iterations. This is a good indicator of how well a strategy is doing relative to the maximum possible average of 5 points per interaction.
 
+## THINGS TO NOTICE
 
-THINGS TO NOTICE
-----------------
 Set all the number of player for each strategy to be equal in distribution.  For which strategy does the average-payoff seem to be highest?  Do you think this strategy is always the best to use or will there be situations where other strategy will yield a higher average-payoff?
 
 Set the number of n-cooperate to be high, n-defects to be equivalent to that of n-cooperate, and all other players to be 0.  Which strategy will yield the higher average-payoff?
@@ -506,18 +577,15 @@ Set the number of n-tit-for-tat to be high, n-defects to be equivalent to that o
 Set the number n-tit-for-tat to be equal to the number of n-cooperate.  Set all other players to be 0.  Which strategy will yield the higher average-payoff?  Why do you suppose that one strategy will lead to higher or equal payoff?
 
 
+## THINGS TO TRY
 
-THINGS TO TRY
---------------
 1.  Observe the results of running the model with a variety of populations and population sizes. For example, can you get cooperate's average payoff to be higher than defect's? Can you get Tit-for-Tat's average payoff higher than cooperate's? What do these experiments suggest about an optimal strategy?
 
 2.  Currently the UNKNOWN strategy defaults to TIT-FOR-TAT. Modify the UNKOWN and UNKNOWN-HISTORY-UPDATE procedures to execute a strategy of your own creation. Test it in a variety of populations.  Analyze its strengths and weaknesses. Keep trying to improve it.
 
 3.  Relate your observations from this model to real life events. Where might you find yourself in a similar situation? How might the knowledge obtained from the model influence your actions in such a situation? Why?
 
-
-EXTENDING THE MODEL
----------------------
+## EXTENDING THE MODEL
 
 Complex strategies using lists of lists - The strategies defined here are relatively simple, some would even say naive.  Create a strategy that uses the PARTNER-HISTORY variable to store a list of history information pertaining to past interactions with each turtle.
 
@@ -529,45 +597,40 @@ Spatial Relations - Allow turtles to choose not to interact with a partner.  All
 
 Environmental resources - include an environmental (patch) resource and incorporate it into the interactions.
 
+## NETLOGO FEATURES
 
-NETLOGO FEATURES
------------------
 Note the use of the TO-REPORT primitive in the function CALC-SCORE to return a number
 
 Note the use of lists and turtle ID's to keep a running history of interactions in the PARTNER-HISTORY turtle variable.
 
 Note how agent sets that will be used repeatedly are stored when created and reused to increase speed.
 
+## RELATED MODELS
 
-RELATED MODELS
----------------
 PD Basic
 
 PD Two Person Iterated
 
 PD Basic Evolutionary
 
+## HOW TO CITE
 
-HOW TO CITE
------------
-If you mention this model in an academic publication, we ask that you include these citations for the model itself and for the NetLogo software:
-- Wilensky, U. (2002).  NetLogo PD N-Person Iterated model.  http://ccl.northwestern.edu/netlogo/models/PDN-PersonIterated.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
+If you mention this model in an academic publication, we ask that you include these citations for the model itself and for the NetLogo software:  
+- Wilensky, U. (2002).  NetLogo PD N-Person Iterated model.  http://ccl.northwestern.edu/netlogo/models/PDN-PersonIterated.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.  
 - Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
 
-In other publications, please use:
+In other publications, please use:  
 - Copyright 2002 Uri Wilensky. All rights reserved. See http://ccl.northwestern.edu/netlogo/models/PDN-PersonIterated for terms of use.
 
+## COPYRIGHT NOTICE
 
-COPYRIGHT NOTICE
-----------------
 Copyright 2002 Uri Wilensky. All rights reserved.
 
-Permission to use, modify or redistribute this model is hereby granted, provided that both of the following requirements are followed:
-a) this copyright notice is included.
+Permission to use, modify or redistribute this model is hereby granted, provided that both of the following requirements are followed:  
+a) this copyright notice is included.  
 b) this model will not be redistributed for profit without permission from Uri Wilensky. Contact Uri Wilensky for appropriate licenses for redistribution for profit.
 
 This model was created as part of the projects: PARTICIPATORY SIMULATIONS: NETWORK-BASED DESIGN FOR SYSTEMS LEARNING IN CLASSROOMS and/or INTEGRATED SIMULATION AND MODELING ENVIRONMENT. The project gratefully acknowledges the support of the National Science Foundation (REPP & ROLE programs) -- grant numbers REC #9814682 and REC-0126227.
-
 @#$#@#$#@
 default
 true
@@ -852,7 +915,7 @@ Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 
 @#$#@#$#@
-NetLogo 4.1.3
+NetLogo 5.1.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@

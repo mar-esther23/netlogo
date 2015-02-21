@@ -554,18 +554,18 @@ NIL
 @#$#@#$#@
 ## WHAT IS IT?
 
-This model is a multiplayer version of the iterated prisoner's dilemma with reproduction and death. It is intended to explore the strategic and evolutionary implications that emerge when the world consists entirely of prisoner's dilemma like interactions. If you are unfamiliar with the basic concepts of the prisoner's dilemma or the iterated prisoner's dilemma, please refer to the PD BASIC, PD TWO PERSON ITERATED and PD N-Person Iterated models found in the PRISONER'S DILEMMA suite.
+This model is a multiplayer version of the iterated prisoner's dilemma with reproduction and death. It is intended to explore the evolutionary implications that emerge when the world consists entirely of prisoner's dilemma like interactions. Check the PD BASIC, PD TWO PERSON ITERATED and PD N-Person Iterated models found in the Models Library PRISONER'S DILEMMA suite.
 
 
 ## HOW IT WORKS
 
-In the Iterated PD different strategies interact in different ways with each other. This makes it difficult to determine a single "best" strategy. One such approach to doing this is to create a world with multiple agents playing a variety of strategies in repeated prisoner's dilemma situations. The players win energy from each game, which they can use to reproduce. If a player has no energy it dies. The turtles with different strategies wander around randomly until they find another turtle to play with. (Note that each turtle remembers their last interaction with each other turtle. While some strategies don't make use of this information, other strategies do.)
+Multiple agents play a variety of strategies in repeated prisoner's dilemma situations. The players win energy from each game, which they can use to reproduce. If a player has no energy it dies. The turtles with different strategies wander around randomly until they find another turtle to play with. Patches can only colonize empty patches in their neighborhood.
 
 Payoffs
 
-When two turtles interact, they display their respective payoffs as labels.
+When two players interact, they display their respective payoffs as labels.
 
-Each turtle's payoff for each round will determined as follows:
+Each players's payoff for each round will determined as follows:
 
                  | Partner's Action
       Turtle's   |
@@ -578,23 +578,7 @@ Each turtle's payoff for each round will determined as follows:
       (C = Cooperate, D = Defect)
 
 
-## HOW TO USE IT
-
-Buttons:
-
-SETUP: Setup the world to begin playing the multi-person iterated prisoner's dilemma. The number of turtles and their strategies are determined by the slider values.
-
-GO: Have the turtles walk around the world and interact.
-
-GO ONCE: Same as GO except the turtles only take one step.
-
-Sliders:
-
-N-STRATEGY: Multiple sliders exist with the prefix N- then a strategy name (e.g., n-cooperate). Each of these determines how many turtles will be created that use the STRATEGY. Strategy descriptions are found below:
-
 Strategies:
-
-RANDOM - randomly cooperate or defect
 
 COOPERATE - always cooperate
 
@@ -602,15 +586,41 @@ DEFECT - always defect
 
 TIT-FOR-TAT - If an opponent cooperates on this interaction cooperate on the next interaction with them. If an opponent defects on this interaction, defect on the next interaction with them. Initially cooperate.
 
-UNFORGIVING - Cooperate until an opponent defects once, then always defect in each interaction with them.
+RANDOM - randomly cooperate or defect
 
-UNKNOWN - This strategy is included to help you try your own strategies. It currently defaults to Tit-for-Tat.
 
-Plots:
+## HOW TO USE IT
+
+SETUP: Setup the world to begin playing the multi-person iterated prisoner's dilemma. The number of turtles and their strategies are determined by the slider values.
+
+GO: Have the turtles walk around the world and interact.
+
+GO ONCE: Same as GO except the turtles only take one step.
+
+TURTLES?: Turtles can be players.
+
+PATCHES?: Patches can be players.
+
+ADD-TURTLES: Add N turtles with a strategy determined by N-STRATEGY.
+
+ADD-PATCHES: Add N patches with a strategy determined by N-STRATEGY.
+
+N-STRATEGY: Multiple sliders exist with the prefix N- then a strategy name (e.g., n-cooperate). Each of these determines how many turtles will be created that use the STRATEGY. Strategy descriptions are found below:
 
 AVERAGE-PAYOFF - The average payoff of each strategy in an interaction vs. the number of iterations. This is a good indicator of how well a strategy is doing relative to the maximum possible average of 5 points per interaction.
 
+DIE?: Players die if score reaches 0.
+
+DECAY?: Players lose a certain number of point from their score each tick.
+
+HATCH?: Generate new players with the characteristics of the parent if the score is higher than a REPRODUCE.
+
+REPRODUCE: Score necesary to generate new players.
+
+
 ## THINGS TO NOTICE
+
+Do the following using turtles or patches and with or without death and reproduction.
 
 Set all the number of player for each strategy to be equal in distribution.  For which strategy does the average-payoff seem to be highest?  Do you think this strategy is always the best to use or will there be situations where other strategy will yield a higher average-payoff?
 
@@ -625,29 +635,19 @@ Set the number n-tit-for-tat to be equal to the number of n-cooperate.  Set all 
 
 1.  Observe the results of running the model with a variety of populations and population sizes. For example, can you get cooperate's average payoff to be higher than defect's? Can you get Tit-for-Tat's average payoff higher than cooperate's? What do these experiments suggest about an optimal strategy?
 
-2.  Currently the UNKNOWN strategy defaults to TIT-FOR-TAT. Modify the UNKOWN and UNKNOWN-HISTORY-UPDATE procedures to execute a strategy of your own creation. Test it in a variety of populations.  Analyze its strengths and weaknesses. Keep trying to improve it.
-
-3.  Relate your observations from this model to real life events. Where might you find yourself in a similar situation? How might the knowledge obtained from the model influence your actions in such a situation? Why?
+2.  Relate your observations from this model to real life events. Where might you find yourself in a similar situation? How might the knowledge obtained from the model influence your actions in such a situation? Why?
 
 ## EXTENDING THE MODEL
 
 Complex strategies using lists of lists - The strategies defined here are relatively simple, some would even say naive.  Create a strategy that uses the PARTNER-HISTORY variable to store a list of history information pertaining to past interactions with each turtle.
 
-Evolution - Create a version of this model that rewards successful strategies by allowing them to reproduce and punishes unsuccessful strategies by allowing them to die off.
-
 Noise - Add noise that changes the action perceived from a partner with some probability, causing misperception.
-
-Spatial Relations - Allow turtles to choose not to interact with a partner.  Allow turtles to choose to stay with a partner.
 
 Environmental resources - include an environmental (patch) resource and incorporate it into the interactions.
 
 ## NETLOGO FEATURES
 
-Note the use of the TO-REPORT primitive in the function CALC-SCORE to return a number
-
-Note the use of lists and turtle ID's to keep a running history of interactions in the PARTNER-HISTORY turtle variable.
-
-Note how agent sets that will be used repeatedly are stored when created and reused to increase speed.
+Note the use of the TO-REPORT primitive in the function SELECT-ACTION and PAYOFF to return a number
 
 ## RELATED MODELS
 
@@ -655,11 +655,14 @@ PD Basic
 
 PD Two Person Iterated
 
-PD Basic Evolutionary
+PD N-Person Iterated
 
 ## HOW TO CITE
 
-If you mention this model in an academic publication, we ask that you include these citations for the model itself and for the NetLogo software:  
+This model was created by:
+Martinez-Sanchez, M. E. (2015). NetLogo PD N-Person Iterated Evolution model.
+
+This model is based in the NetLogo PD N-Person Iterated model:
 - Wilensky, U. (2002).  NetLogo PD N-Person Iterated model.  http://ccl.northwestern.edu/netlogo/models/PDN-PersonIterated.  Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.  
 - Wilensky, U. (1999). NetLogo. http://ccl.northwestern.edu/netlogo/. Center for Connected Learning and Computer-Based Modeling, Northwestern University, Evanston, IL.
 

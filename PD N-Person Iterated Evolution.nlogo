@@ -7,143 +7,177 @@ turtles-own [
   defect-now?
   partner-defected? ;;action of the partner
   partner           ;;WHO of my partner (nobody if not partnered)
-  partner-history   ;;a list containing information about past interactions
-                    ;;with other turtles (indexed by WHO values)
+  partner-history   ;;a list containing information about past interaction
 ]
+
+patches-own [
+  p-score
+  p-strategy
+  p-defect-now?
+  p-partner-defected? ;;action of the partner
+  p-partner           ;;WHO of my partner (nobody if not partnered)
+  p-partner-history   ;;a list containing information about past interaction
+]
+
+
 
 
 to setup
   clear-all
-  add-turtles
+  if turtles? [ add-turtles ]
+  if patches? [ add-patches ]
   reset-ticks
 end
 
 to add-turtles
-  crt n-random [ 
-    set strategy "random" 
-    set defect-now? one-of [True False]
-    set color gray - 1 
-    set score 10 
-    set partner nobody
-    set partner-history false
-    setxy random-xcor random-ycor ]
   crt n-cooperate [ 
     set strategy "cooperate" 
     set defect-now? False
     set color blue
-    set score 10 
-    set partner nobody
-    set partner-history false
-    setxy random-xcor random-ycor ]
+    init_turtle ]
   crt n-defect [ 
     set strategy "defect" 
     set defect-now? True
     set color red
-    set score 10 
-    set partner nobody
-    set partner-history false
-    setxy random-xcor random-ycor ]
+    init_turtle ]
   crt n-tit-for-tat [ 
     set strategy "tit-for-tat" 
     set defect-now? False
     set color lime
-    set score 10 
-    set partner nobody
-    set partner-history false
-    setxy random-xcor random-ycor ]
-  crt n-unforgiving [ 
-    set strategy "unforgiving" 
-    set defect-now? False
-    set color turquoise - 1
-    set score 10 
-    set partner nobody
-    set partner-history false
-    setxy random-xcor random-ycor ]
-  ask turtles [
-  ]
+    init_turtle ]
+  crt n-random [ 
+    set strategy "random" 
+    set defect-now? one-of [True False]
+    set color gray - 1 
+    init_turtle ]
 end
+  
+to init_turtle ;;turtle procedure
+    set score 10 
+    set partner nobody
+    set partner-history false
+    setxy random-xcor random-ycor
+end
+
+to add-patches
+  if (n-cooperate + n-defect + n-tit-for-tat + n-random) + 1 > (count patches with [ pcolor = black ] + 1)
+    [ error "Not enough free patches" ]
+  ask n-of n-cooperate patches with [ pcolor = black ] [
+    set p-strategy "cooperate" 
+    set p-defect-now? False
+    set pcolor blue
+    init_patch ]
+  ask n-of n-defect patches with [ pcolor = black ] [
+    set p-strategy "defect" 
+    set p-defect-now? True
+    set pcolor red
+    init_patch ]
+  ask n-of n-tit-for-tat patches with [ pcolor = black ] [
+    set p-strategy "tit-for-tat" 
+    set p-defect-now? False
+    set pcolor lime
+    init_patch ]
+  ask n-of n-random patches with [ pcolor = black ] [
+    set p-strategy "random" 
+    set p-defect-now? one-of [True False]
+    set pcolor gray - 1
+    init_patch ]
+end
+
+to init_patch ;;patch procedure
+    set p-score 10 
+    set p-partner nobody
+    set p-partner-history false
+end
+
+
+
 
 to go
   ;;clear last round
-  ask turtles [
-    set partner nobody 
-    set label ""
-    ]
+  ask turtles [ set partner nobody  ]
+  ask patches [ set p-partner nobody ]
+   
   ;;move
-  if move? [
-    ask turtles [ rt random 360 fd 1 ] ]
+  ask turtles [ rt random 360 fd 1 ]
   
   ;; set partner
-  ask turtles [         
+  if turtles? [   ask turtles [         
     set partner one-of (turtles-on neighbors) with [ partner = nobody ]
     if partner != nobody [ ask partner [ set partner myself ] ]
-  ]
+  ]   ]
+  if patches? [   ask patches with [ pcolor != black]  [         
+    set p-partner one-of (neighbors) with [ pcolor != black and p-partner = nobody ]
+    if p-partner != nobody [ ask p-partner [ set p-partner myself ] ]
+  ]   ]
   
   ;;play
-  ask-concurrent turtles with [ partner != nobody ]  [ 
-    select-action     ;;all partnered turtles select action
-    payoff      ;;calculate the payoff for this round
+  if turtles? [   ask-concurrent turtles with [ partner != nobody ]  [ 
+    set defect-now?  select-action strategy partner-history   ;;all players select action
+    set score score + payoff defect-now? [defect-now?] of partner     ;;calculate round payoff
     set partner-history [defect-now?] of partner
-    ]
+  ]   ]
+  if patches? [   ask-concurrent patches with [ p-partner != nobody ]  [ 
+    set p-defect-now?  select-action p-strategy p-partner-history   ;;all players select action
+    set p-score p-score + payoff p-defect-now? [p-defect-now?] of p-partner     ;;calculate round payoff
+    set p-partner-history [p-defect-now?] of p-partner
+    set plabel p-score
+  ]   ]
   
   ;;life and death
-  if hatch? [ ask turtles with [ score > reproduce] [
-    set score (score - reproduce)
-    hatch 1 [
-      set score 10
-      set partner nobody
-      rt random 360 fd radius
-      ]
-    ] ]
-  if decay? [ask turtles [ set score score - 1 ] ]
-  if die? [ ask turtles with [ score < 1 ] [die] ]
+  if hatch? [ 
+    if turtles?   [ ask turtles with [ score > reproduce] [
+       set score (score - reproduce)
+       hatch 1 [ init_turtle ]
+    ]    ]   
+    if patches?   [ ask-concurrent patches with [pcolor = black] [
+        let parent one-of neighbors with [ p-score > reproduce]
+        if parent != nobody [
+          ask patch [pxcor] of parent [pycor] of parent [ set p-score p-score - reproduce ]
+          set p-strategy [p-strategy] of parent
+          set p-defect-now? [p-defect-now?] of parent
+          set pcolor [pcolor] of parent
+          init_patch ]
+    ]   ]
+    ]
+  if turtles? [
+    ask turtles [ set score score - decay ]
+    if die? [ ask turtles with [ score < 1 ] [die] ]
+  ]
+  if patches? [
+    ask patches [ set p-score p-score - decay ]
+    if die? [ ask patches with [ p-score < 1 ] [set pcolor black] ]
+  ]
   
   ;; control
-  ask turtles [ set label score ]
-  if (count turtles) = 0 or (count turtles) > 10000 [ stop ]
+  if patches? [ ask patches with [ pcolor != black ] [ set plabel p-score ] ]
+  if turtles? [ ask turtles with [ color != black ] [ set label score ] ]
+  if patches? and (count patches with [pcolor != black]) = 0 [ stop ]
+  if turtles? and (count turtles) = 0 [ stop ]
+  if (count turtles) > 10000 [ stop ]
   tick
 end
 
 
-to select-action ;;turtle procedure
+to-report select-action [ r-strategy r-partner-history ]
   ;;choose an action based upon the strategy being played
-  if strategy = "random" [ set defect-now? one-of [True False] ]
-  ;if strategy = "cooperate" [ set defect-now? False ]
-  ;if strategy = "defect" [ set defect-now? True ]
-  if strategy = "tit-for-tat" [ set defect-now? partner-history ]
-  if strategy = "unforgiving" [ 
-    if not defect-now? and partner-history [set defect-now? True]
-    ]
+  if r-strategy = "random" [ report one-of [True False] ]
+  if r-strategy = "cooperate" [ report False ]
+  if r-strategy = "defect" [ report True ]
+  if r-strategy = "tit-for-tat" [ report r-partner-history ]
 end
 
-to payoff ;;turtle procedure
+to-report payoff [ r-defect-now r-partner-defected ]
   ;;calculate wins and loses
-  set partner-defected? [defect-now?] of partner
-  ifelse partner-defected? [
-    ifelse defect-now? 
-      [ set score (score + D_D) set label D_D ] 
-      [ set score (score + C_D) set label C_D ]
+  ifelse r-partner-defected [
+    ifelse r-defect-now
+      [ report D_D] 
+      [ report C_D ]
   ] [
-    ifelse defect-now? 
-      [ set score (score + D_C) set label D_C ] 
-      [ set score (score + C_C) set label C_C ]
+    ifelse r-defect-now
+      [ report D_C ] 
+      [ report C_C ]
   ]
-end
-
-
-to do-plots
-  
-  set-current-plot "Rate"
-  set-current-plot-pen "random"
-  plot (count turtles with [strategy = "random"]) / (count turtles)
-  set-current-plot-pen "cooperate"
-  plot (count turtles with [strategy = "cooperate"]) / (count turtles)
-  set-current-plot-pen "defect"
-  plot (count turtles with [strategy = "defect"]) / (count turtles)
-  set-current-plot-pen "tit-for-tat"
-  plot (count turtles with [strategy = "tit-for-tat"]) / (count turtles)
-  set-current-plot-pen "unforgiving"
-  plot (count turtles with [strategy = "unforgiving"]) / (count turtles)
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -208,10 +242,10 @@ NIL
 1
 
 SLIDER
-8
-61
-134
-94
+138
+136
+264
+169
 n-random
 n-random
 0
@@ -223,10 +257,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
-94
-134
-127
+9
+136
+135
+169
 n-cooperate
 n-cooperate
 0
@@ -238,45 +272,30 @@ NIL
 HORIZONTAL
 
 SLIDER
-8
-127
-134
-160
+9
+169
+135
+202
 n-defect
 n-defect
 0
 50
-1
+5
 1
 1
 NIL
 HORIZONTAL
 
 SLIDER
-133
-61
-259
-94
+138
+170
+264
+203
 n-tit-for-tat
 n-tit-for-tat
 0
 50
 25
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-133
-94
-259
-127
-n-unforgiving
-n-unforgiving
-0
-50
-0
 1
 1
 NIL
@@ -354,15 +373,15 @@ D_D
 Number
 
 SLIDER
-8
-162
-134
-195
+186
+376
+289
+409
 reproduce
 reproduce
-10
+1
 100
-15
+8
 1
 1
 NIL
@@ -388,13 +407,16 @@ PENS
 "tit-for-tat" 1.0 0 -10899396 true "" "plot count turtles with [strategy = \"tit-for-tat\"]"
 "cooperate" 1.0 0 -13345367 true "" "plot count turtles with [strategy = \"cooperate\"]"
 "defect" 1.0 0 -2674135 true "" "plot count turtles with [strategy = \"defect\"]"
-"unforgiving" 1.0 0 -14835848 true "" "plot count turtles with [strategy = \"unforgiving\"]"
+"p-random" 1.0 0 -7500403 true "" "plot count patches with [p-strategy = \"random\"]"
+"p-tit-for-tat" 1.0 0 -10899396 true "" "plot count patches with [p-strategy = \"tit-for-tat\"]"
+"p-cooperate" 1.0 0 -13345367 true "" "plot count patches with [p-strategy = \"cooperate\"]"
+"p-defect" 1.0 0 -2674135 true "" "plot count patches with [p-strategy = \"defect\"]"
 
 SWITCH
-189
-248
-292
-281
+186
+273
+289
+306
 die?
 die?
 0
@@ -402,10 +424,10 @@ die?
 -1000
 
 SWITCH
-188
-352
-292
-385
+186
+342
+289
+375
 hatch?
 hatch?
 0
@@ -413,10 +435,10 @@ hatch?
 -1000
 
 BUTTON
-188
-388
-291
-421
+19
+99
+122
+132
 NIL
 add-turtles
 NIL
@@ -445,22 +467,14 @@ true
 false
 "" ""
 PENS
-"random" 1.0 0 -7500403 true "" "plot (count turtles with [strategy = \"random\"]) / (count turtles)"
-"tit-for-tat" 1.0 0 -10899396 true "" "plot (count turtles with [strategy = \"tit-for-tat\"]) / (count turtles)"
-"cooperate" 1.0 0 -13345367 true "" "plot (count turtles with [strategy = \"cooperate\"]) / (count turtles)"
-"defect" 1.0 0 -2674135 true "" "plot (count turtles with [strategy = \"defect\"]) / (count turtles)"
-"unforgiving" 1.0 0 -14835848 true "" "plot (count turtles with [strategy = \"unforgiving\"]) / (count turtles)"
-
-SWITCH
-189
-281
-292
-314
-decay?
-decay?
-0
-1
--1000
+"random" 1.0 0 -7500403 true "" "plot (count turtles with [strategy = \"random\"]) / (count turtles + 1)"
+"tit-for-tat" 1.0 0 -10899396 true "" "plot (count turtles with [strategy = \"tit-for-tat\"]) / (count turtles + 1)"
+"cooperate" 1.0 0 -13345367 true "" "plot (count turtles with [strategy = \"cooperate\"]) / (count turtles + 1)"
+"defect" 1.0 0 -2674135 true "" "plot (count turtles with [strategy = \"defect\"]) / (count turtles + 1)"
+"p-random" 1.0 0 -7500403 true "" "plot (count patches with [p-strategy = \"random\"]) / (count patches with [pcolor != black] + 1)"
+"p-tit-for-tat" 1.0 0 -10899396 true "" "plot (count patches with [p-strategy = \"tit-for-tat\"]) / (count patches with [pcolor != black] + 1)"
+"p-cooperate" 1.0 0 -13345367 true "" "plot (count patches with [p-strategy = \"cooperate\"]) / (count patches with [pcolor != black] + 1)"
+"p-defect" 1.0 0 -2674135 true "" "plot (count patches with [p-strategy = \"defect\"]) / (count patches with [pcolor != black] + 1)"
 
 PLOT
 739
@@ -478,34 +492,64 @@ true
 false
 "" ""
 PENS
-"defect" 1.0 0 -2674135 true "" "plot (count turtles with [defect-now? = True]) / (count turtles)"
-"cooperate" 1.0 0 -7500403 true "" "plot (count turtles with [defect-now? = False]) / (count turtles)"
+"defect" 1.0 0 -2674135 true "" "plot (count turtles with [defect-now? = True]) / (count turtles + 1)"
+"cooperate" 1.0 0 -13345367 true "" "plot (count turtles with [defect-now? = False]) / (count turtles + 1)"
+"p-defect" 1.0 0 -2674135 true "" "plot (count patches with [p-defect-now? = True]) / (count patches with [pcolor != black] + 1)"
+"p-cooperate" 1.0 0 -13345367 true "" "plot (count patches with [p-defect-now? = False]) / (count patches with [pcolor != black] + 1)"
+
+SWITCH
+16
+64
+127
+97
+turtles?
+turtles?
+1
+1
+-1000
+
+SWITCH
+141
+64
+257
+97
+patches?
+patches?
+1
+1
+-1000
 
 SLIDER
-137
-162
-261
-195
-radius
-radius
+186
+307
+290
+340
+decay
+decay
 0
 10
-1
+2
 1
 1
 NIL
 HORIZONTAL
 
-SWITCH
-188
-316
-291
-349
-move?
-move?
+BUTTON
+148
+99
+251
+132
+NIL
+add-patches
+NIL
 1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
 1
--1000
 
 @#$#@#$#@
 ## WHAT IS IT?
